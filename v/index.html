@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sua caneca em 3D</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="Toque e arraste para ver a caneca de todos os lados, direto no navegador.">
+<meta property="og:title" content="Sua caneca em 3D">
+<meta property="og:description" content="Toque e arraste para ver a caneca de todos os lados, direto no navegador.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://markeiz15.github.io/Kanneko/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:site_name" content="KANNEKO">
+<link rel="icon" href="../kanneko-logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: tela cheia para a caneca; nome do ateliê e da cliente em cima, ângulos embaixo. */
+:root{
+  --bg:#EEF0F3;
+  --fg:#15171C;
+  --muted:#5A6170;
+  --line:#D4D8DF;
+  --raised:#FFFFFF;
+  --accent:#AE1460;
+  --stage-hi:#FAFBFC;
+  --stage-lo:#D9DDE3;
+  --shadow:0 14px 36px -18px rgba(20,24,33,.45);
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-ui:"Instrument Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111317; --fg:#ECEEF2; --muted:#9AA2B0; --line:#2B2F38; --raised:#1E2129; --accent:#F0579F;
+    --stage-hi:#2D3139; --stage-lo:#121418; --shadow:0 14px 36px -16px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111317; --fg:#ECEEF2; --muted:#9AA2B0; --line:#2B2F38; --raised:#1E2129; --accent:#F0579F;
+  --stage-hi:#2D3139; --stage-lo:#121418; --shadow:0 14px 36px -16px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-ui);-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.viewer{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:radial-gradient(120% 80% at 50% 45%,var(--stage-hi) 0%,var(--stage-lo) 100%)}
+.viewer.night{background:radial-gradient(120% 80% at 50% 45%,#2C3242 0%,#0B0D12 100%);color:#ECEEF2}
+.viewer.night .eyebrow{color:#F0579F}
+.viewer.night .fine,.viewer.night .pill{color:#AEB5C2}
+.bar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 4px}
+.brandrow{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:56px;height:56px;flex:none;border-radius:50%;background:#FFFFFF;box-shadow:0 0 0 1px var(--line),var(--shadow)}
+.who{min-width:0}
+.eyebrow{margin:0 0 4px;font:600 12px/1.2 var(--font-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);overflow-wrap:anywhere}
+h1{margin:0;font:700 clamp(21px,5.6vw,34px)/1.1 var(--font-display);letter-spacing:-.02em;text-wrap:balance;overflow-wrap:break-word;hyphens:manual}
+.pill{flex:none;font:500 11.5px/1 var(--font-mono);padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:var(--raised);background:color-mix(in srgb,var(--raised) 75%,transparent);color:var(--muted);white-space:nowrap}
+
+.stage{position:relative;min-height:0}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.stage canvas.dragging{cursor:grabbing}
+.state{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;color:var(--muted)}
+.state p{margin:0;max-width:34ch}
+.state.error p{color:var(--fg);font-weight:500}
+.spinner{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.dock{display:grid;justify-items:center;gap:10px;padding:8px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.controls{display:grid;gap:8px;width:min(520px,100%)}
+.ctl-row{display:grid;grid-template-columns:1fr 2fr;gap:8px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;padding:4px;border-radius:12px;background:var(--raised);background:color-mix(in srgb,var(--raised) 90%,transparent);border:1px solid var(--line);box-shadow:var(--shadow)}
+.seg button{appearance:none;border:0;background:transparent;min-height:42px;padding:8px 6px;border-radius:8px;font:600 13.5px/1.15 var(--font-ui);text-align:center;cursor:pointer;color:var(--muted)}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.fine{margin:0;font-size:12px;color:var(--muted);text-align:center;max-width:60ch}
+@media (max-width:560px){ .pill{display:none} }
+@media (max-width:420px){ .seg button{font-size:13px} .bar{padding-inline:16px} }
+@media (prefers-reduced-motion:reduce){ .spinner{animation:none} }
+</style>
+</head>
+<body>
+<main class="viewer">
+  <header class="bar">
+    <div class="brandrow">
+      <img class="logo" src="../kanneko-logo.png" alt="KANNEKO">
+      <div class="who">
+        <p class="eyebrow" id="brand">KANNEKO</p>
+        <h1 id="title">Sua caneca em 3D</h1>
+      </div>
+    </div>
+    <span class="pill" id="dims">Caneca 325 ml</span>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="state" id="state" role="status" aria-live="polite"><div class="spinner" id="spinner"></div><p id="stateMsg">Carregando a caneca…</p></div>
+  </div>
+
+  <div class="dock">
+    <div class="controls" id="views" hidden>
+      <div class="seg" role="group" aria-label="Ângulo da caneca">
+        <button type="button" data-view="left">Alça à esquerda</button>
+        <button type="button" data-view="front">Frente</button>
+        <button type="button" data-view="right">Alça à direita</button>
+      </div>
+      <div class="ctl-row">
+        <div class="seg"><button type="button" id="spin" aria-pressed="true">Girar</button></div>
+        <div class="seg" role="group" aria-label="Iluminação">
+          <button type="button" data-light="dia">Dia</button>
+          <button type="button" data-light="noite">Noite</button>
+        </div>
+      </div>
+    </div>
+    <p class="fine">Arraste para girar. Prévia ilustrativa: as cores podem variar um pouco na caneca impressa.</p>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../mug3d.js?v=6"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const VIEWS = { left: Math.PI - 0.3, front: Math.PI / 2, right: 0.3 };
+
+  function show(msg, isError) {
+    $('#state').hidden = false;
+    $('#state').classList.toggle('error', !!isError);
+    $('#spinner').hidden = !!isError;
+    $('#stateMsg').textContent = msg;
+  }
+
+  // No GitHub Pages os dados ficam no ramo "dados" do mesmo repositório; em teste local, em ../m/.
+  function dataUrl(id) {
+    const h = location.hostname;
+    if (/\.github\.io$/i.test(h)) {
+      const owner = h.split('.')[0], seg = location.pathname.split('/').filter(Boolean);
+      const repo = seg.length > 1 ? seg[0] : h;
+      return 'https://raw.githubusercontent.com/' + owner + '/' + repo + '/dados/m/' + id + '.bin';
+    }
+    return '../m/' + id + '.bin';
+  }
+  async function fetchMockup(id) {
+    for (let i = 0; i < 5; i++) {
+      let r = null;
+      try { r = await fetch(dataUrl(id) + '?t=' + Date.now(), { cache: 'no-store' }); } catch (e) { r = null; }
+      if (r && r.ok) return r.arrayBuffer();
+      if (r && r.status !== 404) throw new Error('http');
+      show(i ? 'Preparando a caneca… (o link acabou de ser criado)' : 'Carregando a caneca…');
+      await sleep(i ? 4000 : 1500);
+    }
+    throw new Error('404');
+  }
+  function loadImage(blob) {
+    return new Promise((res, rej) => {
+      const img = new Image(), url = URL.createObjectURL(blob);
+      img.onload = () => res(img);
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img')); };
+      img.src = url;
+    });
+  }
+
+  async function start() {
+    const M3 = window.Mug3D, p = M3 && M3.share.parseHash(location.hash);
+    if (!window.THREE || !M3) { show('Não deu para carregar o 3D. Confira a internet e abra o link de novo.', true); return; }
+    if (!p) { show('Este link está incompleto. Confira se ele foi copiado inteiro ou peça um novo para quem te enviou.', true); return; }
+
+    let renderer;
+    try { renderer = M3.newRenderer(); } catch (e) { show('Este navegador não consegue mostrar 3D. Tente abrir o link no Chrome ou no Safari.', true); return; }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const stage = $('#stage'), cv = renderer.domElement, camera = M3.newCamera(), m = M3.create(renderer);
+
+    let data;
+    try {
+      const buf = await fetchMockup(p.id);
+      data = await M3.share.unpack(buf, p.key);
+    } catch (e) {
+      show(e.message === '404' ? 'Não encontrei esta caneca. O link pode ter sido apagado; peça um novo para quem te enviou.'
+        : e.message === 'http' ? 'Não deu para baixar a caneca agora. Confira a internet e abra o link de novo.'
+        : 'Não deu para abrir esta caneca. Confira se o link foi copiado inteiro.', true);
+      return;
+    }
+    const cfg = data.cfg || {};
+    const img = await loadImage(data.art).catch(() => null);
+    if (!img) { show('A arte desta caneca não abriu. Peça um novo link para quem te enviou.', true); return; }
+
+    let light = cfg.light === 'noite' ? 'noite' : 'dia';
+    const applyLight = () => {
+      $('.viewer').classList.toggle('night', light === 'noite');
+      document.querySelectorAll('#views [data-light]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.light === light)));
+    };
+    applyLight();
+    m.set({ light, artMM: cfg.artMM || 210, fit: 'stretch', inner: cfg.inner || M3.WHITE, handle: cfg.handle || M3.WHITE, body: cfg.body || M3.WHITE });
+    m.setArt(img, img.naturalWidth, img.naturalHeight);
+    const brand = (cfg.brand || '').trim() || 'KANNEKO', client = (cfg.client || '').trim();
+    $('#brand').textContent = brand;
+    $('#title').textContent = client ? 'Caneca de ' + client : 'Sua caneca personalizada';
+    $('#dims').textContent = 'Arte ' + (cfg.artMM || 210) + ' × ' + M3.ART_H_MM + ' mm';
+    document.title = (client ? 'Caneca de ' + client : 'Sua caneca em 3D') + (brand ? ' · ' + brand : '');
+
+    stage.prepend(cv);
+    $('#state').hidden = true;
+    $('#views').hidden = false;
+
+    let yaw = VIEWS.front - 0.9, yawTarget = null, elev = 0.2, dist = 1, spinning = true, dirty = true, lastT = 0;
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) { spinning = false; yaw = VIEWS.front; }
+    const spinBtn = $('#spin');
+    const setSpin = (v) => { spinning = v; yawTarget = null; spinBtn.setAttribute('aria-pressed', String(v)); };
+    setSpin(spinning);
+    const pressView = (id) => document.querySelectorAll('#views [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === id)));
+
+    new ResizeObserver(() => {
+      const r = stage.getBoundingClientRect();
+      renderer.setSize(Math.max(1, Math.round(r.width)), Math.max(1, Math.round(r.height)), false);
+      dirty = true;
+    }).observe(stage);
+
+    function tick(t) {
+      requestAnimationFrame(tick);
+      const dt = Math.min(0.05, (t - lastT) / 1000 || 0); lastT = t;
+      if (spinning) { yaw += dt * 0.55; dirty = true; }
+      else if (yawTarget !== null) {
+        const d = yawTarget - yaw;
+        if (Math.abs(d) < 0.002 || reduceMotion) { yaw = yawTarget; yawTarget = null; } else yaw += d * Math.min(1, dt * 7);
+        dirty = true;
+      }
+      if (dirty) { m.render(renderer, camera, { yaw, elev, dist, halfW: 7.4, halfTall: 6.6 }); dirty = false; }
+    }
+    requestAnimationFrame(tick);
+
+    document.querySelectorAll('#views [data-view]').forEach((b) => b.addEventListener('click', () => {
+      setSpin(false);
+      let d = (VIEWS[b.dataset.view] - yaw) % (Math.PI * 2);
+      if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
+      yawTarget = yaw + d; elev = 0.2; dist = 1; dirty = true;
+      pressView(b.dataset.view);
+    }));
+    document.querySelectorAll('#views [data-light]').forEach((b) => b.addEventListener('click', () => {
+      light = b.dataset.light; m.set({ light }); applyLight(); dirty = true;
+    }));
+    spinBtn.addEventListener('click', () => { setSpin(!spinning); pressView(''); });
+
+    // girar com o dedo / mouse, aproximar com pinça ou roda
+    const pts = new Map(); let pinch = 0;
+    cv.addEventListener('pointerdown', (e) => {
+      cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      setSpin(false); pressView(''); cv.classList.add('dragging');
+    });
+    cv.addEventListener('pointermove', (e) => {
+      const q = pts.get(e.pointerId); if (!q) return;
+      if (pts.size === 1) {
+        yaw += (e.clientX - q.x) * 0.011;
+        elev = clamp(elev + (e.clientY - q.y) * 0.006, -0.05, 0.85);
+        dirty = true;
+      }
+      q.x = e.clientX; q.y = e.clientY;
+      if (pts.size === 2) {
+        const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch) { dist = clamp(dist * pinch / d, 0.5, 1.7); dirty = true; }
+        pinch = d;
+      }
+    });
+    const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; if (!pts.size) cv.classList.remove('dragging'); };
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => cv.addEventListener(ev, up));
+    cv.addEventListener('wheel', (e) => { e.preventDefault(); dist = clamp(dist * (1 + e.deltaY * 0.0012), 0.5, 1.7); dirty = true; }, { passive: false });
+  }
+
+  start();
+  window.addEventListener('hashchange', () => location.reload());
+})();
+</script>
+</body>
+</html>

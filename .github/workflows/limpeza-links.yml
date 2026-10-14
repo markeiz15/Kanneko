@@ -1,0 +1,56 @@
+name: Limpeza dos links 3D
+
+# Todo dia 1º do mês, às 03:00 (Brasília), apaga os links com mais de 90 dias.
+# O ramo "dados" é recriado só com os links recentes, para o espaço ser liberado de verdade
+# (apagar arquivo normalmente deixa ele guardado no histórico do Git).
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: 'Apagar links com mais de quantos dias'
+        default: '90'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: limpeza-links
+
+jobs:
+  limpar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dados
+          fetch-depth: 0
+
+      - name: Recriar o ramo dados só com os links recentes
+        env:
+          DIAS: ${{ github.event.inputs.dias || '90' }}
+        run: |
+          set -euo pipefail
+          limite=$(( $(date +%s) - DIAS * 86400 ))
+          : > mantidos.txt
+          apagados=0
+          shopt -s nullglob
+          for f in m/*.bin; do
+            criado=$(git log -1 --format=%ct -- "$f")
+            if [ "${criado:-0}" -ge "$limite" ]; then echo "$criado $f" >> mantidos.txt; else apagados=$((apagados + 1)); fi
+          done
+          echo "Links mantidos: $(wc -l < mantidos.txt) · apagados: $apagados"
+          if [ "$apagados" -eq 0 ]; then echo "Nada para apagar."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q --orphan dados-novo
+          git rm -rq --cached .
+          git add LEIA-ME.md
+          git commit -qm "Limpeza: remove $apagados links com mais de $DIAS dias"
+          # cada link mantido volta num commit com a data original, para a idade continuar certa
+          sort -n mantidos.txt | while read -r criado f; do
+            git add "$f"
+            GIT_AUTHOR_DATE="@$criado" GIT_COMMITTER_DATE="@$criado" git commit -qm "mockup $(basename "$f" .bin)"
+          done
+          git push -qf origin HEAD:dados
