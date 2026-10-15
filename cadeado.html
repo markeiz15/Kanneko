@@ -58,9 +58,13 @@ button[disabled]{opacity:.6;cursor:progress}
   const $ = (id) => document.getElementById(id);
 
   // Abre o Provador: decifra a página inteira e troca este documento por ela.
+  // Só troca depois que esta página terminou de carregar; antes disso o navegador
+  // ignora o document.open() e o Provador acaba colado embaixo da tela de senha.
+  const carregada = document.readyState === 'complete' ? Promise.resolve() : new Promise((ok) => window.addEventListener('load', ok, { once: true }));
   async function abrir(chaveBruta) {
     const k = await crypto.subtle.importKey('raw', chaveBruta, 'AES-GCM', false, ['decrypt']);
     const html = new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(D.iv) }, k, b64(D.ct)));
+    await carregada;
     document.open(); document.write(html); document.close();
   }
   async function desembrulhar(senha) {
