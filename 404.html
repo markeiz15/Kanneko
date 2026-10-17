@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>KANNEKO</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#EEF0F3;color:#15171C;font:15px/1.5 "Segoe UI",system-ui,sans-serif;text-align:center}</style>
+</head>
+<body>
+<p id="msg">Página não encontrada.</p>
+<script>
+// Alguns aplicativos trocam o "#" do link 3D por "%23" e o GitHub responde com esta página.
+// Se o endereço tiver um código de caneca, manda para a página da cliente do jeito certo.
+(function () {
+  var s = location.href; try { s = decodeURIComponent(s); } catch (e) {}
+  var m = /([a-z2-9]{12})\.([A-Za-z0-9_-]{22})(?![A-Za-z0-9_-])/.exec(s);
+  var base = location.pathname.split('/').filter(Boolean)[0];
+  if (m) { document.getElementById('msg').textContent = 'Abrindo a caneca…'; location.replace('/' + base + '/v/#' + m[1] + '.' + m[2]); }
+})();
+</script>
+</body>
+</html>

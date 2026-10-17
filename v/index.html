@@ -123,7 +123,7 @@ h1{margin:0;font:700 clamp(21px,5.6vw,34px)/1.1 var(--font-display);letter-spaci
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="../mug3d.js?v=6"></script>
+<script src="../mug3d.js?v=7"></script>
 <script>
 (function () {
   'use strict';
@@ -170,7 +170,7 @@ h1{margin:0;font:700 clamp(21px,5.6vw,34px)/1.1 var(--font-display);letter-spaci
   }
 
   async function start() {
-    const M3 = window.Mug3D, p = M3 && M3.share.parseHash(location.hash);
+    const M3 = window.Mug3D, p = M3 && (M3.share.parseHash(location.hash) || M3.share.parseHash(location.href));
     if (!window.THREE || !M3) { show('Não deu para carregar o 3D. Confira a internet e abra o link de novo.', true); return; }
     if (!p) { show('Este link está incompleto. Confira se ele foi copiado inteiro ou peça um novo para quem te enviou.', true); return; }
 

@@ -276,8 +276,12 @@
     return { cfg, art: new Blob([plain.subarray(8 + n)], { type: 'image/jpeg' }) };
   }
   // "#id.chave" → { id, key }
-  function parseHash(hash) {
-    const m = /^#?([a-z2-9]{8,32})\.([A-Za-z0-9_-]{20,})$/.exec(hash || '');
+  // Tolerante: acha "código.chave" em qualquer parte do texto, mesmo com o # trocado por %23,
+  // espaço ou pontuação grudados no fim (alguns aplicativos de mensagem fazem isso).
+  function parseHash(text) {
+    let s = String(text || '');
+    try { s = decodeURIComponent(s); } catch (e) { /* mantém como veio */ }
+    const m = /([a-z2-9]{12})\.([A-Za-z0-9_-]{22})(?![A-Za-z0-9_-])/.exec(s);
     return m ? { id: m[1], key: m[2] } : null;
   }
 
