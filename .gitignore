@@ -1,4 +1,6 @@
 m/
-# código aberto e chave do Provador: ficam só neste computador
+# código aberto e chaves: ficam só neste computador
 provador.html
 .chave-provador.json
+.controle.json
+fonte/

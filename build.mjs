@@ -9,7 +9,16 @@ if (!existsSync(aqui('.chave-provador.json'))) {
   process.exit(1);
 }
 const conf = JSON.parse(readFileSync(aqui('.chave-provador.json'), 'utf8'));
-const fonte = readFileSync(aqui('provador.html'), 'utf8');
+let fonte = readFileSync(aqui('provador.html'), 'utf8');
+
+// Controle de pedidos/financeiro/estoque (fonte/): entra junto, criptografado.
+if (existsSync(aqui('fonte/controle.js'))) {
+  const cfg = existsSync(aqui('.controle.json')) ? JSON.parse(readFileSync(aqui('.controle.json'), 'utf8')) : null;
+  const config = cfg && cfg.url ? '<script>window.KANNEKO_CONTROLE = ' + JSON.stringify({ url: cfg.url, chave: cfg.chave }) + ';</script>\n' : '';
+  fonte = fonte.replace('<!--CONTROLE-->', () => config +
+    '<style>\n' + readFileSync(aqui('fonte/controle.css'), 'utf8') + '</style>\n<script>\n' + readFileSync(aqui('fonte/controle.js'), 'utf8') + '</script>');
+  console.log(config ? 'Controle incluído (planilha configurada).' : 'Controle incluído, ainda sem planilha (só modo ?demo).');
+}
 const app = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="icon" href="kanneko-logo.png" type="image/png"></head><body>\n' + fonte + '\n</body></html>';
 
 const chave = await crypto.subtle.importKey('raw', Buffer.from(conf.k, 'base64'), 'AES-GCM', false, ['encrypt']);
